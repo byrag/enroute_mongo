@@ -1,0 +1,30 @@
+/* Global base: page, photograph background, reveal animation, a11y */
+html { scroll-behavior: smooth; }
+body { overflow-x:hidden; position:relative; background:#eaf7f1; }
+
+/* ================= PAGE PHOTOGRAPH =================
+   The image URL is set in src/config/site.js (HERO_PHOTO). */
+.page-bg {
+  position:fixed; inset:0; z-index:-1;
+  background-color:#d9ede4;
+  background-size:cover; background-position:center; background-repeat:no-repeat;
+}
+.page-bg::after {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(180deg, rgba(255,255,255,.62) 0%, rgba(236,253,245,.5) 100%);
+}
+
+/* ================= SCROLL REVEAL ================= */
+.reveal { opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+.reveal.show { opacity:1; transform:translateY(0); }
+
+#mobileMenu { max-height:0; opacity:0; overflow:hidden; transition:.3s ease; }
+#mobileMenu.open { max-height:350px; opacity:1; }
+
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after {
+    animation-duration:.01ms !important;
+    animation-iteration-count:1 !important;
+    scroll-behavior:auto !important;
+  }
+}

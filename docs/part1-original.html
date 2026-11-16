@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enroute | Share Rides. Send Parcels.</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            enroute: {
+              50:"#effcf6", 100:"#d9f8e9", 200:"#b8efd3",
+              300:"#7de0b0", 400:"#34c98a", 500:"#10b981",
+              600:"#059669", 700:"#047857", 800:"#065f46", 900:"#064e3b"
+            }
+          },
+          boxShadow: {
+            soft: "0 20px 60px rgba(15,23,42,.12)"
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    html { scroll-behavior: smooth; }
+
+    /* ================= PAGE BACKGROUND ================= */
+    body {
+      overflow-x:hidden;
+      position:relative;
+      background:#eaf7f1;
+    }
+
+    body::before {
+      content:"";
+      position:fixed;
+      inset:0;
+      z-index:-2;
+      background-image:
+        linear-gradient(rgba(255,255,255,.03), rgba(255,255,255,.03)),
+        url("https://images.pexels.com/photos/2996211/pexels-photo-2996211.jpeg?auto=compress&cs=tinysrgb&w=1920");
+      background-size:cover;
+      background-position:center top;
+      background-repeat:no-repeat;
+      background-attachment:fixed;
+    }
+
+    body::after {
+      content:"";
+      position:fixed;
+      inset:0;
+      z-index:-1;
+      pointer-events:none;
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(236,253,245,.03));
+    }
+
+    /* ================= LIVE MAP ================= */
+    .map {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(28deg, transparent 47%, rgba(148,163,184,.16) 48%, rgba(148,163,184,.16) 49%, transparent 50%),
+        linear-gradient(112deg, transparent 47%, rgba(148,163,184,.14) 48%, rgba(148,163,184,.14) 49%, transparent 50%),
+        linear-gradient(90deg, rgba(148,163,184,.10) 1px, transparent 1px),
+        linear-gradient(rgba(148,163,184,.10) 1px, transparent 1px),
+        #eef8f4;
+      background-size: 180px 130px, 230px 170px, 48px 48px, 48px 48px;
+      animation: mapMove 22s linear infinite;
+    }
+
+    @keyframes mapMove {
+      from { background-position:0 0, 0 0, 0 0, 0 0; }
+      to   { background-position:180px 130px, -230px -170px, 48px 48px, -48px -48px; }
+    }
+
+    /* ================= ROUTE ================= */
+    .route-line {
+      stroke-dasharray: 13 10;
+      animation: routeFlow 2.5s linear infinite;
+    }
+
+    @keyframes routeFlow {
+      to { stroke-dashoffset:-46; }
+    }
+
+    .route-car {
+      offset-path: path("M 80 100 C 160 155 175 235 300 220 S 420 80 525 135 S 660 285 805 230");
+      offset-rotate: auto;
+      animation: routeCar 8s linear infinite;
+    }
+
+    @keyframes routeCar {
+      to { offset-distance:100%; }
+    }
+
+    /* ================= MARKERS ================= */
+    .marker-pulse {
+      animation: markerPulse 1.8s ease-out infinite;
+    }
+
+    @keyframes markerPulse {
+      0% { transform:scale(.7); opacity:.75; }
+      75%,100% { transform:scale(1.7); opacity:0; }
+    }
+
+    /* ================= ROAD ================= */
+    .road {
+      position:relative;
+      height:175px;
+      overflow:hidden;
+      background:
+        linear-gradient(#94a3b8 0 6px,#263449 6px 169px,#94a3b8 169px 175px);
+    }
+
+    .road-lane {
+      position:absolute;
+      left:0;
+      right:0;
+      height:3px;
+      background:repeating-linear-gradient(
+        90deg,#f8fafc 0 55px,transparent 55px 105px
+      );
+    }
+
+    .lane-a { top:55px; }
+    .lane-b { top:116px; }
+
+    .road-center {
+      position:absolute;
+      left:0;
+      right:0;
+      top:85px;
+      height:4px;
+      background:repeating-linear-gradient(
+        90deg,#facc15 0 45px,transparent 45px 90px
+      );
+    }
+
+    /* ================= SVG VEHICLE ANIMATION ================= */
+    .vehicle {
+      position:absolute;
+      z-index:10;
+      filter:drop-shadow(0 7px 5px rgba(0,0,0,.3));
+    }
+
+    .right-fast { animation: driveRight 13s linear infinite; }
+    .right-slow { animation: driveRight 22s linear infinite -11s; }
+    .left-fast { animation: driveLeft 16s linear infinite -5s; }
+
+    @keyframes driveRight {
+      from { transform:translateX(-150px); }
+      to { transform:translateX(calc(100vw + 150px)); }
+    }
+
+    @keyframes driveLeft {
+      from { transform:translateX(calc(100vw + 150px)); }
+      to { transform:translateX(-150px); }
+    }
+
+    /* ================= SCENERY ================= */
+    .tree {
+      transform-origin:bottom center;
+      animation: treeSway 3s ease-in-out infinite;
+    }
+
+    .tree:nth-child(2n) { animation-delay:.7s; }
+    .tree:nth-child(3n) { animation-delay:1.3s; }
+
+    @keyframes treeSway {
+      0%,100% { transform:rotate(-1deg); }
+      50% { transform:rotate(1.5deg); }
+    }
+
+    .cloud {
+      animation: cloudMove 25s linear infinite;
+    }
+
+    @keyframes cloudMove {
+      from { transform:translateX(-15vw); }
+      to { transform:translateX(115vw); }
+    }
+
+    /* ================= UI ================= */
+    .float {
+      animation: floating 5s ease-in-out infinite;
+    }
+
+    @keyframes floating {
+      0%,100% { transform:translateY(0); }
+      50% { transform:translateY(-9px); }
+    }
+
+    .reveal {
+      opacity:0;
+      transform:translateY(18px);
+      transition:opacity .7s ease, transform .7s ease;
+    }
+
+    .reveal.show {
+      opacity:1;
+      transform:translateY(0);
+    }
+
+    #mobileMenu {
+      max-height:0;
+      opacity:0;
+      overflow:hidden;
+      transition:.3s ease;
+    }
+
+    #mobileMenu.open {
+      max-height:350px;
+      opacity:1;
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after {
+        animation-duration:.01ms !important;
+        animation-iteration-count:1 !important;
+        scroll-behavior:auto !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="text-slate-900">
+
+<!-- ============================================================
+     NAVIGATION
+============================================================ -->
+<header class="sticky top-0 z-50 border-b border-slate-200/70 bg-white/75 backdrop-blur-xl">
+  <div class="mx-auto flex max-w-7xl items-center justify-between px-5 py-3.5 lg:px-8">
+
+    <a href="#home" class="flex items-center gap-3">
+      <div class="grid h-10 w-10 place-items-center rounded-2xl bg-enroute-600 text-white">
+        <svg width="25" height="28" viewBox="0 0 25 28" fill="none">
+          <path d="M12.5 27S22 17.4 22 11.2C22 5.5 17.75 1 12.5 1S3 5.5 3 11.2C3 17.4 12.5 27 12.5 27Z" fill="white"/>
+          <circle cx="12.5" cy="11" r="4.5" fill="#059669"/>
+        </svg>
+      </div>
+
+      <div>
+        <div class="text-xl font-black tracking-tight">Enroute</div>
+        <div class="hidden text-[9px] font-bold uppercase tracking-[.18em] text-slate-400 sm:block">
+          People • Parcels • A Smarter Tomorrow
+        </div>
+      </div>
+    </a>
+
+    <nav class="hidden items-center gap-8 text-sm font-bold md:flex">
+      <a href="#home" class="text-enroute-700">Home</a>
+      <a href="#services" class="text-slate-500 hover:text-slate-900">Rides</a>
+      <a href="#services" class="text-slate-500 hover:text-slate-900">Parcels</a>
+      <a href="#how" class="text-slate-500 hover:text-slate-900">How It Works</a>
+      <a href="#about" class="text-slate-500 hover:text-slate-900">About</a>
+    </nav>
+
+    <div class="hidden items-center gap-3 md:flex">
+      <button onclick="toast('Login will be connected later.')" class="rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-100">
+        Login
+      </button>
+      <button onclick="toast('Registration will be connected later.')" class="rounded-xl bg-enroute-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-enroute-700">
+        Get Started
+      </button>
+    </div>
+
+    <button id="menuBtn" class="rounded-xl p-2 md:hidden" aria-label="Menu">
+      <svg width="25" height="25" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M4 6h16M4 12h16M4 18h16" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="mobileMenu" class="border-t border-slate-100 bg-white md:hidden">
+    <div class="space-y-1 px-5 py-4">
+      <a href="#home" class="mobile-link block rounded-xl px-4 py-3 font-bold">Home</a>
+      <a href="#services" class="mobile-link block rounded-xl px-4 py-3 font-bold">Services</a>
+      <a href="#how" class="mobile-link block rounded-xl px-4 py-3 font-bold">How It Works</a>
+      <a href="#about" class="mobile-link block rounded-xl px-4 py-3 font-bold">About</a>
+    </div>
+  </div>
+</header>
+
+
+<!-- ============================================================
+     HERO
+============================================================ -->
+<section id="home" class="relative overflow-hidden bg-white/08 backdrop-blur-[1px]">
+
+  <!-- decorative clouds -->
+  <div class="cloud pointer-events-none absolute left-0 top-20 opacity-50">
+    <svg width="130" height="45" viewBox="0 0 130 45">
+      <path d="M15 37h98c10 0 14-8 8-14-3-3-7-4-12-4-1-10-10-17-20-17-8 0-15 4-18 11-4-5-10-7-16-7-9 0-17 7-18 16H15c-8 0-10 15 0 15Z" fill="white"/>
+    </svg>
+  </div>
+
+  <div class="cloud pointer-events-none absolute top-44 opacity-40" style="animation-duration:32s;animation-delay:-12s">
+    <svg width="100" height="36" viewBox="0 0 100 36">
+      <path d="M12 30h75c8 0 10-8 5-12-3-2-5-3-9-3C82 7 76 3 69 3c-7 0-12 4-15 10-3-3-7-5-12-5-7 0-13 5-14 12H12c-6 0-7 10 0 10Z" fill="white"/>
+    </svg>
+  </div>
+
+
+  <div class="relative mx-auto max-w-7xl px-5 pb-0 pt-12 lg:px-8 lg:pt-16">
+
+    <div class="grid items-center gap-8 lg:grid-cols-[.88fr_1.12fr]">
+
+      <!-- HERO TEXT -->
+      <div class="reveal relative z-20">
+        <div class="mb-5 text-xs font-black uppercase tracking-[.28em] text-enroute-700">
+          Smarter Mobility. Cleaner Cities.
+        </div>
+
+        <h1 class="text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-[4.4rem]">
+          Share Rides.
+          <br>
+          Send Parcels.
+          <br>
+          <span class="text-enroute-600">Go Further Together.</span>
+        </h1>
+
+        <p class="mt-6 max-w-xl text-lg leading-7 text-slate-600">
+          AI-powered matching for people and parcels based on
+          route, time, traffic and vehicle capacity.
+        </p>
+
+        <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+          <button onclick="setMode('ride'); document.getElementById('searchBox').scrollIntoView({behavior:'smooth',block:'center'})"
+            class="rounded-2xl bg-enroute-600 px-6 py-3.5 font-black text-white shadow-lg shadow-enroute-600/20 hover:bg-enroute-700">
+            🚗 Find a Ride
+          </button>
+
+          <button onclick="setMode('parcel'); document.getElementById('searchBox').scrollIntoView({behavior:'smooth',block:'center'})"
+            class="rounded-2xl border border-slate-200 bg-white px-6 py-3.5 font-black hover:bg-slate-50">
+            📦 Send a Parcel
+          </button>
+        </div>
+      </div>
+
+
+      <!-- MAP -->
+      <div class="reveal relative h-[470px]">
+
+        <div class="map absolute inset-0 rounded-[2.5rem] border border-white shadow-soft">
+
+          <!-- city buildings -->
+          <div class="absolute bottom-12 left-5 flex items-end gap-2 opacity-35">
+            <div class="h-16 w-7 rounded-t bg-slate-400"></div>
+            <div class="h-24 w-10 rounded-t bg-slate-300"></div>
+            <div class="h-12 w-6 rounded-t bg-slate-400"></div>
+            <div class="h-32 w-12 rounded-t bg-slate-300"></div>
+            <div class="h-20 w-8 rounded-t bg-slate-400"></div>
+          </div>
+
+          <!-- trees on map -->
+          <div class="tree absolute left-[22%] top-[28%] text-3xl">🌳</div>
+          <div class="tree absolute left-[34%] top-[14%] text-2xl">🌳</div>
+          <div class="tree absolute right-[30%] top-[30%] text-3xl">🌳</div>
+          <div class="tree absolute right-[16%] top-[45%] text-2xl">🌳</div>
+
+          <!-- animated route -->
+          <svg class="absolute inset-0 h-full w-full" viewBox="0 0 900 470" preserveAspectRatio="none">
+            <path d="M80 100 C160 155 175 235 300 220 S420 80 525 135 S660 285 805 230"
+                  fill="none" stroke="white" stroke-width="15" stroke-linecap="round"/>
+            <path d="M80 100 C160 155 175 235 300 220 S420 80 525 135 S660 285 805 230"
+                  fill="none" stroke="#10b981" stroke-width="7" stroke-linecap="round" class="route-line"/>
+
+            <!-- moving SVG car -->
+            <g class="route-car">
+              <rect x="-18" y="-10" width="36" height="20" rx="6" fill="#064e3b"/>
+              <path d="M-9 -8h13l6 8h-25l6-8Z" fill="#d9f8e9"/>
+              <circle cx="-11" cy="10" r="4" fill="#172033"/>
+              <circle cx="11" cy="10" r="4" fill="#172033"/>
+            </g>
+          </svg>
+
+
+          <!-- PICKUP -->
+          <div class="absolute left-[7%] top-[13%]">
+            <div class="marker-pulse absolute inset-0 rounded-full bg-enroute-400"></div>
+            <div class="relative grid h-12 w-12 place-items-center rounded-full border-4 border-white bg-enroute-600 text-white shadow-lg">
+              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21s7-6.2 7-12A7 7 0 0 0 5 9c0 5.8 7 12 7 12Z" stroke-width="2.3"/>
+                <circle cx="12" cy="9" r="2.2" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="absolute left-[13%] top-[5%] rounded-xl bg-white px-4 py-2 shadow-lg">
+            <div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Pickup</div>
+            <div class="text-sm font-black">Koramangala</div>
+          </div>
+
+
+          <!-- DESTINATION -->
+          <div class="absolute bottom-[22%] right-[5%]">
+            <div class="marker-pulse absolute inset-0 rounded-full bg-red-400"></div>
+            <div class="relative grid h-12 w-12 place-items-center rounded-full border-4 border-white bg-red-500 text-white shadow-lg">
+              <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21s7-6.2 7-12A7 7 0 0 0 5 9c0 5.8 7 12 7 12Z" stroke-width="2.3"/>
+                <circle cx="12" cy="9" r="2.2" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="absolute bottom-[14%] right-[5%] rounded-xl bg-white px-4 py-2 shadow-lg">
+            <div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Destination</div>
+            <div class="text-sm font-black">Electronic City</div>
+          </div>
+
+
+          <!-- LIVE ETA -->
+          <div class="float absolute right-5 top-5 w-52 rounded-2xl border border-white bg-white/95 p-4 shadow-soft">
+            <div class="flex items-center justify-between">
+              <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Live ETA</div>
+              <div class="grid h-9 w-9 place-items-center rounded-xl bg-enroute-50 text-enroute-700">⏱</div>
+            </div>
+            <div class="mt-2 text-3xl font-black"><span id="eta">18</span> min</div>
+            <div class="text-xs font-semibold text-slate-500">via Hosur Road</div>
+            <div class="mt-2 inline-flex rounded-full bg-enroute-100 px-2.5 py-1 text-[10px] font-black text-enroute-800">
+              ● Moderate Traffic
+            </div>
+          </div>
+
+
+          <!-- MATCHED DRIVER -->
+          <div class="float absolute bottom-5 left-5 rounded-2xl bg-enroute-700 px-4 py-3 text-white shadow-xl">
+            <div class="flex items-center gap-2.5">
+              <div class="grid h-9 w-9 place-items-center rounded-xl bg-white/15">✓</div>
+              <div>
+                <div class="text-[9px] font-black uppercase tracking-wider text-enroute-200">AI MATCH</div>
+                <div class="text-xs font-black">Driver matched · 96%</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+
+
+      </div>
+    </div>
+
+
+    <!-- ========================================================
+         SCENIC ROAD + HOUSES + TREES + CARS
+    ========================================================= -->
+    <div class="relative mt-20 -mx-5 lg:-mx-8">
+
+      <!-- background hills -->
+      <div class="absolute bottom-[135px] left-0 right-0 h-36 overflow-hidden">
+        <svg class="h-full w-full" viewBox="0 0 1200 150" preserveAspectRatio="none">
+          <path d="M0 145C130 65 190 85 310 135C420 180 510 55 650 110C760 155 850 50 980 100C1080 140 1130 65 1200 80V150H0Z" fill="#d7eee4"/>
+          <path d="M0 150C160 90 230 105 350 140C490 180 570 85 690 125C820 165 920 70 1040 110C1120 135 1160 105 1200 110V150Z" fill="#c4e5d7"/>
+        </svg>
+      </div>
+
+      <!-- houses and trees -->
+      <div class="absolute bottom-[135px] left-0 right-0 z-10 h-40">
+
+        <!-- House 1 -->
+        <svg class="absolute bottom-2 left-[5%] w-24 sm:w-32" viewBox="0 0 140 105">
+          <path d="M18 52 70 15l52 37v43H18Z" fill="#fff"/>
+          <path d="m10 55 60-45 60 45-9 10-51-38-51 38Z" fill="#f59e0b"/>
+          <rect x="29" y="58" width="25" height="37" rx="2" fill="#dbeafe"/>
+          <rect x="78" y="64" width="22" height="31" fill="#78350f"/>
+          <path d="M32 64h19M32 74h19" stroke="#93c5fd" stroke-width="3"/>
+          <rect x="73" y="43" width="12" height="7" fill="#94a3b8"/>
+        </svg>
+
+        <!-- House 2 -->
+        <svg class="absolute bottom-1 left-[28%] w-20 sm:w-28" viewBox="0 0 140 105">
+          <path d="M18 50 70 12l52 38v45H18Z" fill="#fefce8"/>
+          <path d="m10 53 60-45 60 45-9 10-51-38-51 38Z" fill="#ef4444"/>
+          <rect x="31" y="58" width="22" height="36" fill="#bfdbfe"/>
+          <rect x="76" y="63" width="22" height="31" fill="#92400e"/>
+        </svg>
+
+        <!-- House 3 -->
+        <svg class="absolute bottom-0 right-[27%] w-24 sm:w-32" viewBox="0 0 140 105">
+          <path d="M18 52 70 15l52 37v43H18Z" fill="#fff"/>
+          <path d="m10 55 60-45 60 45-9 10-51-38-51 38Z" fill="#fb923c"/>
+          <rect x="30" y="58" width="24" height="36" fill="#bae6fd"/>
+          <rect x="78" y="61" width="21" height="33" fill="#92400e"/>
+          <rect x="48" y="32" width="44" height="5" fill="#10b981"/>
+        </svg>
+
+        <!-- trees -->
+        <div class="tree absolute bottom-0 left-[17%] text-5xl">🌳</div>
+        <div class="tree absolute bottom-1 left-[40%] text-4xl">🌳</div>
+        <div class="tree absolute bottom-0 right-[15%] text-5xl">🌳</div>
+        <div class="tree absolute bottom-0 right-[5%] text-4xl">🌳</div>
+      </div>
+
+      <!-- ROAD -->
+      <div class="road">
+        <div class="road-lane lane-a"></div>
+        <div class="road-lane lane-b"></div>
+        <div class="road-center"></div>
+
+        <!-- Green SVG car -->
+        <div class="vehicle right-fast" style="top:17px">
+          <svg width="88" height="47" viewBox="0 0 88 47">
+            <path d="M12 29h62c5 0 9 4 9 9v2H5v-4c0-4 3-7 7-7Z" fill="#10b981"/>
+            <path d="m20 28 10-14h25l14 14" fill="#10b981"/>
+            <path d="M31 16h22l8 12H24l7-12Z" fill="#d9f8e9"/>
+            <circle cx="22" cy="40" r="7" fill="#172033"/>
+            <circle cx="66" cy="40" r="7" fill="#172033"/>
+            <circle cx="22" cy="40" r="2.5" fill="#94a3b8"/>
+            <circle cx="66" cy="40" r="2.5" fill="#94a3b8"/>
+          </svg>
+        </div>
+
+        <!-- Blue SVG car -->
+        <div class="vehicle left-fast" style="top:72px">
+          <svg width="92" height="48" viewBox="0 0 92 48">
+            <path d="M11 30h67c5 0 9 4 9 9v2H4v-4c0-4 3-7 7-7Z" fill="#2563eb"/>
+            <path d="m20 29 11-15h25l15 15" fill="#2563eb"/>
+            <path d="M32 17h22l9 12H24l8-12Z" fill="#dbeafe"/>
+            <circle cx="22" cy="41" r="7" fill="#172033"/>
+            <circle cx="69" cy="41" r="7" fill="#172033"/>
+            <circle cx="22" cy="41" r="2.5" fill="#94a3b8"/>
+            <circle cx="69" cy="41" r="2.5" fill="#94a3b8"/>
+          </svg>
+        </div>
+
+        <!-- Parcel van -->
+        <div class="vehicle right-slow" style="top:119px">
+          <svg width="105" height="49" viewBox="0 0 105 49">
+            <rect x="5" y="7" width="69" height="34" rx="5" fill="#f8fafc"/>
+            <path d="M74 17h13l12 12v12H74Z" fill="#f8fafc"/>
+            <rect x="13" y="13" width="53" height="18" rx="3" fill="#d9f8e9"/>
+            <path d="M30 16h18v12H30Z" fill="#10b981"/>
+            <circle cx="22" cy="42" r="7" fill="#172033"/>
+            <circle cx="84" cy="42" r="7" fill="#172033"/>
+            <circle cx="22" cy="42" r="2.5" fill="#94a3b8"/>
+            <circle cx="84" cy="42" r="2.5" fill="#94a3b8"/>
+          </svg>
+        </div>
+
+        <div class="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/10 px-5 py-2 text-[10px] font-black tracking-[.15em] text-white backdrop-blur">
+          A GREENER WAY TO MOVE →
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============================================================
+     COMPACT STATS
+============================================================ -->
+<section class="border-b border-slate-100 bg-white/75 backdrop-blur-sm">
+  <div class="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-5 px-5 py-7 sm:justify-between">
+
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">👥</span>
+      <div><div class="font-black"><span class="counter" data-target="10">0</span>K+</div><div class="text-xs text-slate-400">Active Users</div></div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🚗</span>
+      <div><div class="font-black"><span class="counter" data-target="5">0</span>K+</div><div class="text-xs text-slate-400">Rides Shared</div></div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">📦</span>
+      <div><div class="font-black"><span class="counter" data-target="3">0</span>K+</div><div class="text-xs text-slate-400">Parcels Delivered</div></div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🌱</span>
+      <div><div class="font-black text-enroute-600"><span class="counter" data-target="40">0</span>%</div><div class="text-xs text-slate-400">Lower Emissions</div></div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ============================================================
+     RIDE / PARCEL SEARCH
+     Placed directly above Our Services
+============================================================ -->
+<section class="relative z-30 -mt-4 mb-0 bg-transparent px-5 lg:px-8">
+  <div class="mx-auto max-w-6xl">
+  <!-- RIDE / PARCEL SEARCH TABS -->
+  <div id="searchBox" class="relative z-30 w-full overflow-hidden rounded-3xl border border-white bg-white/95 shadow-soft backdrop-blur">
+
+          <div class="grid grid-cols-2 border-b border-slate-100">
+            <button id="rideTab" onclick="setMode('ride')" class="bg-enroute-50 px-4 py-3 text-left font-black text-enroute-700">
+              🚗 Find a Ride
+              <div class="pl-6 text-[10px] font-semibold text-slate-400">Travel together</div>
+            </button>
+
+            <button id="parcelTab" onclick="setMode('parcel')" class="px-4 py-3 text-left font-black text-slate-500">
+              📦 Send a Parcel
+              <div class="pl-6 text-[10px] font-semibold text-slate-400">Deliver on the move</div>
+            </button>
+          </div>
+
+          <div class="grid gap-2 p-3 sm:grid-cols-[1fr_1fr_.7fr_.65fr_auto]">
+
+            <div class="rounded-xl border border-slate-200 px-3 py-2.5">
+              <div class="text-[9px] font-black uppercase text-slate-400">From</div>
+              <input id="from" class="mt-0.5 w-full bg-transparent text-xs font-bold outline-none" placeholder="Pickup location">
+            </div>
+
+            <div class="rounded-xl border border-slate-200 px-3 py-2.5">
+              <div class="text-[9px] font-black uppercase text-slate-400">To</div>
+              <input id="to" class="mt-0.5 w-full bg-transparent text-xs font-bold outline-none" placeholder="Destination">
+            </div>
+
+            <div class="rounded-xl border border-slate-200 px-3 py-2.5">
+              <div class="text-[9px] font-black uppercase text-slate-400">Date</div>
+              <input id="date" type="date" class="mt-0.5 w-full bg-transparent text-xs font-bold outline-none">
+            </div>
+
+            <div class="rounded-xl border border-slate-200 px-3 py-2.5">
+              <div id="capacityLabel" class="text-[9px] font-black uppercase text-slate-400">Seats</div>
+              <select id="capacity" class="mt-0.5 w-full bg-transparent text-xs font-bold outline-none">
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+              </select>
+            </div>
+
+            <button onclick="searchJourney()" class="rounded-xl bg-enroute-600 px-4 py-2.5 text-xs font-black text-white hover:bg-enroute-700">
+              Search →
+            </button>
+          </div>
+
+          <!-- HTML5 / Web API controls -->
+          <div class="flex flex-wrap items-center gap-2 border-t border-slate-100 px-3 py-3">
+            <button onclick="useMyLocation()" class="rounded-xl border border-enroute-200 bg-enroute-50 px-3 py-2 text-[11px] font-black text-enroute-800 hover:bg-enroute-100">
+              📍 Use My Location
+            </button>
+            <button onclick="saveJourney()" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50">
+              💾 Save Search
+            </button>
+            <button onclick="showRecentSearches()" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50">
+              🕘 Recent Searches
+            </button>
+            <button onclick="shareJourney()" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50">
+              📤 Share
+            </button>
+            <button onclick="copyJourney()" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50">
+              📋 Copy
+            </button>
+            <button onclick="enableNotifications()" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 hover:bg-slate-50">
+              🔔 Notifications
+            </button>
+          </div>
+        </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SERVICES - ONLY TWO CARDS
+============================================================ -->
+<section id="services" class="bg-enroute-50/70 backdrop-blur-sm py-16 lg:py-20">
+  <div class="mx-auto max-w-6xl px-5 lg:px-8">
+
+    <div class="reveal mx-auto max-w-2xl text-center">
+      <p class="text-xs font-black uppercase tracking-[.25em] text-enroute-600">Our Services</p>
+      <h2 class="mt-2 text-3xl font-black sm:text-4xl">Two Services. One Smarter Network.</h2>
+      <p class="mt-3 text-slate-600">Move people and parcels along compatible routes.</p>
+    </div>
+
+    <div class="mt-9 grid gap-5 md:grid-cols-2">
+
+      <div class="reveal flex items-center gap-5 rounded-3xl border border-enroute-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+        <div class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-enroute-100 text-2xl">🚗</div>
+        <div class="flex-1">
+          <h3 class="font-black text-xl">Carpooling</h3>
+          <p class="mt-1 text-sm leading-6 text-slate-500">Find rides based on route, time and available seats.</p>
+        </div>
+        <span class="grid h-10 w-10 place-items-center rounded-full bg-enroute-50 font-black text-enroute-700">→</span>
+      </div>
+
+      <div class="reveal flex items-center gap-5 rounded-3xl border border-amber-100 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+        <div class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-amber-50 text-2xl">📦</div>
+        <div class="flex-1">
+          <h3 class="font-black text-xl">Parcel Delivery</h3>
+          <p class="mt-1 text-sm leading-6 text-slate-500">Match parcels with drivers travelling your route.</p>
+        </div>
+        <span class="grid h-10 w-10 place-items-center rounded-full bg-amber-50 font-black text-amber-700">→</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     HOW IT WORKS
+============================================================ -->
+<section id="how" class="bg-white/75 backdrop-blur-sm py-16 lg:py-20">
+  <div class="mx-auto max-w-6xl px-5 lg:px-8">
+
+    <div class="reveal text-center">
+      <p class="text-xs font-black uppercase tracking-[.25em] text-enroute-600">How It Works</p>
+      <h2 class="mt-2 text-3xl font-black sm:text-4xl">A Smarter Way to Move</h2>
+    </div>
+
+    <div class="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+
+      <div class="reveal text-center">
+        <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-enroute-600 font-black text-white">1</div>
+        <div class="mt-4 text-2xl">📍</div>
+        <h3 class="mt-2 font-black">Enter Details</h3>
+        <p class="mt-1 text-sm text-slate-500">Add pickup, destination and requirements.</p>
+      </div>
+
+      <div class="reveal text-center">
+        <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-enroute-600 font-black text-white">2</div>
+        <div class="mt-4 text-2xl">🧠</div>
+        <h3 class="mt-2 font-black">AI Finds a Match</h3>
+        <p class="mt-1 text-sm text-slate-500">Analyse routes, traffic and availability.</p>
+      </div>
+
+      <div class="reveal text-center">
+        <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-enroute-600 font-black text-white">3</div>
+        <div class="mt-4 text-2xl">🚗</div>
+        <h3 class="mt-2 font-black">Confirm & Go</h3>
+        <p class="mt-1 text-sm text-slate-500">Choose your match and start the journey.</p>
+      </div>
+
+      <div class="reveal text-center">
+        <div class="mx-auto grid h-12 w-12 place-items-center rounded-full bg-enroute-600 font-black text-white">4</div>
+        <div class="mt-4 text-2xl">✓</div>
+        <h3 class="mt-2 font-black">Track Your Journey</h3>
+        <p class="mt-1 text-sm text-slate-500">Follow the route with ETA updates.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+
+<!-- ============================================================
+     PARCEL DELIVERY API DEMONSTRATION
+============================================================= -->
+<section id="parcelApiDemo" class="bg-white/80 backdrop-blur-sm py-16 lg:py-20">
+  <div class="mx-auto max-w-6xl px-5 lg:px-8">
+    <div class="reveal mx-auto max-w-3xl text-center">
+      <p class="text-xs font-black uppercase tracking-[.25em] text-amber-600">Parcel Delivery APIs</p>
+      <h2 class="mt-2 text-3xl font-black sm:text-4xl">Try the Parcel Delivery Features</h2>
+      <p class="mt-3 text-slate-600">
+        Demonstrations of browser APIs used by Enroute for parcel pickup, tracking,
+        sharing, notifications and offline delivery history.
+      </p>
+    </div>
+
+    <div class="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+
+      <!-- File API -->
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl">📄</div>
+        <h3 class="mt-3 font-black">Parcel Document</h3>
+        <p class="mt-1 text-xs leading-5 text-slate-500">
+          File API: select a parcel image/invoice and preview it before delivery.
+        </p>
+        <input id="parcelFile" type="file" accept="image/*,.pdf"
+          class="mt-4 w-full rounded-xl border border-slate-200 p-2 text-xs">
+        <div id="filePreview" class="mt-3 hidden overflow-hidden rounded-xl border bg-slate-50 p-2 text-xs"></div>
+      </div>
+
+      <!-- Drag & Drop API -->
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl">📦</div>
+        <h3 class="mt-3 font-black">Drag & Drop Parcel</h3>
+        <p class="mt-1 text-xs leading-5 text-slate-500">
+          Drag a parcel image into the box to attach it to the delivery.
+        </p>
+        <div id="dropZone"
+          class="mt-4 grid min-h-28 place-items-center rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50 p-4 text-center text-xs font-bold text-amber-800">
+          Drop parcel image here
+        </div>
+        <div id="dropStatus" class="mt-2 text-center text-xs text-slate-500"></div>
+      </div>
+
+      <!-- IndexedDB API -->
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl">🗃️</div>
+        <h3 class="mt-3 font-black">Offline Parcel History</h3>
+        <p class="mt-1 text-xs leading-5 text-slate-500">
+          IndexedDB: save parcel tracking records locally in the browser.
+        </p>
+        <input id="trackingId" class="mt-4 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs"
+          placeholder="Tracking ID e.g. ENR12345">
+        <button onclick="saveParcelRecord()"
+          class="mt-2 w-full rounded-xl bg-enroute-600 px-3 py-2 text-xs font-black text-white">
+          Save Tracking Record
+        </button>
+        <button onclick="showParcelHistory()"
+          class="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-black">
+          View Saved Parcels
+        </button>
+      </div>
+
+      <!-- Notifications + Share + Clipboard -->
+      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="text-3xl">🚚</div>
+        <h3 class="mt-3 font-black">Track & Share</h3>
+        <p class="mt-1 text-xs leading-5 text-slate-500">
+          Notifications, Web Share and Clipboard APIs for parcel updates.
+        </p>
+        <div class="mt-4 rounded-xl bg-slate-50 p-3">
+          <div class="text-[9px] font-black uppercase text-slate-400">Status</div>
+          <div id="parcelStatus" class="mt-1 text-sm font-black">Ready for Pickup</div>
+        </div>
+        <button onclick="updateParcelStatus()"
+          class="mt-2 w-full rounded-xl bg-enroute-600 px-3 py-2 text-xs font-black text-white">
+          Simulate Status Update
+        </button>
+        <button onclick="shareParcel()"
+          class="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-black">
+          📤 Share Tracking
+        </button>
+        <button onclick="copyTrackingId()"
+          class="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-black">
+          📋 Copy Tracking ID
+        </button>
+      </div>
+    </div>
+
+    <div class="mt-6 rounded-3xl bg-enroute-900 p-6 text-white shadow-xl">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p class="text-xs font-black uppercase tracking-[.2em] text-enroute-300">Parcel Tracking</p>
+          <h3 class="mt-1 text-xl font-black">ENR-PARCEL-2026</h3>
+          <p class="mt-1 text-sm text-enroute-100">
+            Pickup → In Transit → Near Destination → Delivered
+          </p>
+        </div>
+        <div id="parcelProgress" class="rounded-full bg-white/10 px-5 py-3 text-sm font-black">
+          1 / 4 · Ready for Pickup
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SMALL CTA
+============================================================ -->
+<section id="about" class="bg-enroute-50/70 px-5 py-14 backdrop-blur-sm">
+  <div class="reveal mx-auto flex max-w-5xl flex-col items-center justify-between gap-6 rounded-3xl bg-enroute-900 px-7 py-9 text-center text-white sm:flex-row sm:text-left">
+
+    <div>
+      <p class="text-xs font-black uppercase tracking-[.2em] text-enroute-300">Enroute</p>
+      <h2 class="mt-2 text-2xl font-black">Different journeys. A brighter tomorrow.</h2>
+      <p class="mt-1 text-sm text-enroute-100">People • Parcels • A Smarter Tomorrow</p>
+    </div>
+
+    <button onclick="document.getElementById('searchBox').scrollIntoView({behavior:'smooth',block:'center'})"
+      class="shrink-0 rounded-xl bg-white px-5 py-3 font-black text-enroute-900 hover:bg-enroute-50">
+      Start Your Journey →
+    </button>
+  </div>
+</section>
+
+
+<!-- FOOTER -->
+<footer class="bg-slate-950/90 px-5 py-7 text-center text-xs text-slate-500">
+  <p>© 2026 Enroute. Smart mobility • Connected journeys.</p>
+</footer>
+
+
+<!-- TOAST -->
+<div id="toastBox" class="pointer-events-none fixed bottom-5 left-1/2 z-[100] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 translate-y-5 rounded-2xl bg-slate-950 px-5 py-4 text-center text-sm font-bold text-white opacity-0 shadow-2xl transition-all">
+  <span id="toastText"></span>
+</div>
+
+
+
+
+<script>
+/* ================= MOBILE MENU ================= */
+const menuBtn=document.getElementById("menuBtn");
+const mobileMenu=document.getElementById("mobileMenu");
+
+menuBtn.addEventListener("click",()=>{
+  mobileMenu.classList.toggle("open");
+});
+
+document.querySelectorAll(".mobile-link").forEach(link=>{
+  link.addEventListener("click",()=>mobileMenu.classList.remove("open"));
+});
+
+
+/* ================= DATE ================= */
+const date=document.getElementById("date");
+const d=new Date();
+date.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+
+/* ================= RIDE / PARCEL ================= */
+let mode="ride";
+
+function setMode(next){
+  mode=next;
+
+  const ride=document.getElementById("rideTab");
+  const parcel=document.getElementById("parcelTab");
+  const label=document.getElementById("capacityLabel");
+  const select=document.getElementById("capacity");
+
+  if(next==="ride"){
+    ride.className="bg-enroute-50 px-4 py-3 text-left font-black text-enroute-700";
+    parcel.className="px-4 py-3 text-left font-black text-slate-500";
+    label.textContent="Seats";
+    select.innerHTML="<option>1</option><option>2</option><option>3</option><option>4</option>";
+  }else{
+    parcel.className="bg-amber-50 px-4 py-3 text-left font-black text-amber-700";
+    ride.className="px-4 py-3 text-left font-black text-slate-500";
+    label.textContent="Parcel Size";
+    select.innerHTML="<option>Small</option><option>Medium</option><option>Large</option>";
+  }
+}
+
+
+/* ================= HTML5 / WEB APIs =================
+   1. Geolocation API   - gets the user's current pickup location
+   2. Web Storage API   - saves and retrieves recent searches
+   3. Notifications API - alerts the user about a completed search
+   4. Web Share API     - shares journey details using the device share sheet
+   5. Clipboard API     - copies journey details to the system clipboard
+======================================================== */
+
+/* 1) GEOLOCATION API */
+function useMyLocation(){
+  if(!("geolocation" in navigator)){
+    toast("Geolocation is not supported by this browser.");
+    return;
+  }
+
+  toast("Requesting your location...");
+  navigator.geolocation.getCurrentPosition(
+    position=>{
+      const {latitude, longitude, accuracy}=position.coords;
+      const coordinates=`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+      document.getElementById("from").value=`My location (${coordinates})`;
+      sessionStorage.setItem("enroute_last_location", coordinates);
+      toast(`Location detected (±${Math.round(accuracy)}m).`);
+    },
+    error=>{
+      const messages={
+        1:"Location permission was denied.",
+        2:"Your location could not be determined.",
+        3:"Location request timed out."
+      };
+      toast(messages[error.code] || "Unable to get your location.");
+    },
+    {enableHighAccuracy:true, timeout:10000, maximumAge:60000}
+  );
+}
+
+/* Build a reusable journey object */
+function getJourneyData(){
+  return {
+    mode,
+    from:document.getElementById("from").value.trim(),
+    to:document.getElementById("to").value.trim(),
+    date:document.getElementById("date").value,
+    capacity:document.getElementById("capacity").value
+  };
+}
+
+/* 2) WEB STORAGE API - localStorage */
+function saveJourney(){
+  const journey=getJourneyData();
+
+  if(!journey.from || !journey.to){
+    toast("Enter pickup and destination before saving.");
+    return;
+  }
+
+  const key="enroute_recent_searches";
+  const existing=JSON.parse(localStorage.getItem(key) || "[]");
+  existing.unshift({...journey, savedAt:new Date().toLocaleString()});
+  localStorage.setItem(key, JSON.stringify(existing.slice(0,5)));
+
+  toast("Journey saved in your browser.");
+}
+
+function showRecentSearches(){
+  const searches=JSON.parse(localStorage.getItem("enroute_recent_searches") || "[]");
+
+  if(!searches.length){
+    toast("No saved searches yet.");
+    return;
+  }
+
+  const latest=searches[0];
+  document.getElementById("from").value=latest.from;
+  document.getElementById("to").value=latest.to;
+  document.getElementById("date").value=latest.date;
+  document.getElementById("capacity").value=latest.capacity;
+
+  toast(`Loaded: ${latest.from} → ${latest.to}`);
+}
+
+/* 3) NOTIFICATIONS API */
+async function enableNotifications(){
+  if(!("Notification" in window)){
+    toast("Notifications are not supported by this browser.");
+    return;
+  }
+
+  if(!window.isSecureContext){
+    toast("Notifications require HTTPS or localhost.");
+    return;
+  }
+
+  const permission=await Notification.requestPermission();
+
+  if(permission==="granted"){
+    new Notification("Enroute Notifications Enabled",{
+      body:"You can now receive Enroute journey updates."
+    });
+    toast("Notifications enabled.");
+  }else{
+    toast("Notification permission was not granted.");
+  }
+}
+
+function notifyJourney(message){
+  if("Notification" in window && Notification.permission==="granted"){
+    new Notification("Enroute Journey Update",{body:message});
+  }
+}
+
+/* 4) WEB SHARE API */
+async function shareJourney(){
+  const journey=getJourneyData();
+
+  if(!journey.from || !journey.to){
+    toast("Enter pickup and destination first.");
+    return;
+  }
+
+  const text=`Enroute ${journey.mode==="ride" ? "Ride" : "Parcel"}\n${journey.from} → ${journey.to}\nDate: ${journey.date}`;
+
+  if(navigator.share){
+    try{
+      await navigator.share({
+        title:"Enroute Journey",
+        text,
+        url:window.location.href
+      });
+      toast("Journey shared successfully.");
+    }catch(error){
+      if(error.name!=="AbortError") toast("Sharing was cancelled or unavailable.");
+    }
+  }else{
+    await copyText(text);
+    toast("Web Share is unavailable. Details copied instead.");
+  }
+}
+
+/* 5) CLIPBOARD API */
+async function copyText(text){
+  if(navigator.clipboard && window.isSecureContext){
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  return false;
+}
+
+async function copyJourney(){
+  const journey=getJourneyData();
+
+  if(!journey.from || !journey.to){
+    toast("Enter pickup and destination first.");
+    return;
+  }
+
+  const text=`Enroute ${journey.mode==="ride" ? "Ride" : "Parcel"}: ${journey.from} → ${journey.to} | ${journey.date}`;
+
+  try{
+    if(await copyText(text)){
+      toast("Journey details copied to clipboard.");
+    }else{
+      toast("Clipboard access requires HTTPS or localhost.");
+    }
+  }catch(error){
+    toast("Could not copy journey details.");
+  }
+} 
+
+/* Enhanced search: storage + notification */
+function searchJourney(){
+  const from=document.getElementById("from").value.trim();
+  const to=document.getElementById("to").value.trim();
+
+  if(!from || !to){
+    toast("Enter both pickup and destination.");
+    return;
+  }
+
+  const journey=getJourneyData();
+
+  /* Save the latest search automatically */
+  const key="enroute_recent_searches";
+  const existing=JSON.parse(localStorage.getItem(key) || "[]");
+  localStorage.setItem(
+    key,
+    JSON.stringify([{...journey, savedAt:new Date().toLocaleString()}, ...existing].slice(0,5))
+  );
+
+  const message=mode==="ride"
+    ? `Finding rides from ${from} to ${to}...`
+    : `Finding parcel drivers from ${from} to ${to}...`;
+
+  toast(message);
+  notifyJourney(`Search started: ${from} → ${to}`);
+}
+
+
+/* ================= TOAST ================= */
+let toastTimer;
+
+function toast(message){
+  const box=document.getElementById("toastBox");
+  document.getElementById("toastText").textContent=message;
+
+  box.classList.remove("opacity-0","translate-y-5");
+  box.classList.add("opacity-100","translate-y-0");
+
+  clearTimeout(toastTimer);
+
+  toastTimer=setTimeout(()=>{
+    box.classList.add("opacity-0","translate-y-5");
+    box.classList.remove("opacity-100","translate-y-0");
+  },3200);
+}
+
+
+/* ================= LIVE ETA ================= */
+setInterval(()=>{
+  const el=document.getElementById("eta");
+  let value=Number(el.textContent);
+
+  value += Math.random()>.5 ? 1 : -1;
+  value=Math.max(15,Math.min(23,value));
+
+  el.textContent=value;
+},4500);
+
+
+/* ================= SCROLL REVEAL ================= */
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add("show");
+      observer.unobserve(entry.target);
+    }
+  });
+},{threshold:.12});
+
+document.querySelectorAll(".reveal").forEach(el=>observer.observe(el));
+
+
+/* ================= COUNTERS ================= */
+const counterObserver=new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(!entry.isIntersecting)return;
+
+    const el=entry.target;
+    const target=Number(el.dataset.target);
+    const start=performance.now();
+
+    function animate(time){
+      const progress=Math.min((time-start)/1000,1);
+      const eased=1-Math.pow(1-progress,3);
+
+      el.textContent=Math.round(target*eased);
+
+      if(progress<1){
+        requestAnimationFrame(animate);
+      }
+    }
+
+    requestAnimationFrame(animate);
+    counterObserver.unobserve(el);
+  });
+},{threshold:.5});
+
+document.querySelectorAll(".counter").forEach(el=>counterObserver.observe(el));
+
+/* ============================================================
+   PARCEL DELIVERY WEB API DEMONSTRATIONS
+============================================================= */
+
+/* ---------- File API ---------- */
+const parcelFile = document.getElementById("parcelFile");
+const filePreview = document.getElementById("filePreview");
+
+parcelFile?.addEventListener("change", () => {
+  const file = parcelFile.files[0];
+  if (!file) return;
+
+  filePreview.classList.remove("hidden");
+
+  if (file.type.startsWith("image/")) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      filePreview.innerHTML =
+        `<img src="${e.target.result}" alt="Parcel preview" class="mx-auto max-h-32 rounded-lg">`;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    filePreview.textContent = `Attached: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+  }
+
+  toast(`Parcel file attached: ${file.name}`);
+});
+
+
+/* ---------- Drag and Drop API ---------- */
+const dropZone = document.getElementById("dropZone");
+const dropStatus = document.getElementById("dropStatus");
+
+dropZone?.addEventListener("dragover", e => {
+  e.preventDefault();
+  dropZone.classList.add("ring-2", "ring-amber-400");
+});
+
+dropZone?.addEventListener("dragleave", () => {
+  dropZone.classList.remove("ring-2", "ring-amber-400");
+});
+
+dropZone?.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("ring-2", "ring-amber-400");
+
+  const file = e.dataTransfer.files[0];
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    dropStatus.textContent = "Please drop a parcel image.";
+    return;
+  }
+
+  dropStatus.textContent = `✓ Attached: ${file.name}`;
+  toast("Parcel image attached using Drag & Drop API.");
+});
+
+
+/* ---------- IndexedDB API ---------- */
+let parcelDB;
+
+function openParcelDB() {
+  return new Promise((resolve, reject) => {
+    if (!("indexedDB" in window)) {
+      reject(new Error("IndexedDB is not supported."));
+      return;
+    }
+
+    const request = indexedDB.open("EnrouteParcelDB", 1);
+
+    request.onupgradeneeded = event => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("parcels")) {
+        db.createObjectStore("parcels", { keyPath: "trackingId" });
+      }
+    };
+
+    request.onsuccess = event => {
+      parcelDB = event.target.result;
+      resolve(parcelDB);
+    };
+
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveParcelRecord() {
+  const input = document.getElementById("trackingId");
+  const trackingId = input.value.trim() || `ENR${Date.now().toString().slice(-6)}`;
+
+  try {
+    const db = await openParcelDB();
+
+    const record = {
+      trackingId,
+      status: document.getElementById("parcelStatus")?.textContent || "Ready for Pickup",
+      savedAt: new Date().toLocaleString()
+    };
+
+    const tx = db.transaction("parcels", "readwrite");
+    tx.objectStore("parcels").put(record);
+
+    tx.oncomplete = () => {
+      input.value = trackingId;
+      toast(`Parcel ${trackingId} saved offline.`);
+    };
+  } catch (error) {
+    toast("IndexedDB is unavailable in this browser.");
+  }
+}
+
+async function showParcelHistory() {
+  try {
+    const db = await openParcelDB();
+    const tx = db.transaction("parcels", "readonly");
+    const request = tx.objectStore("parcels").getAll();
+
+    request.onsuccess = () => {
+      const records = request.result;
+
+      if (!records.length) {
+        toast("No saved parcel records yet.");
+        return;
+      }
+
+      const summary = records
+        .slice(-5)
+        .map(p => `${p.trackingId}: ${p.status}`)
+        .join(" | ");
+
+      toast(summary);
+    };
+  } catch (error) {
+    toast("Could not read parcel history.");
+  }
+}
+
+
+/* ---------- Notifications API ---------- */
+async function notifyParcelStatus(status) {
+  if (!("Notification" in window)) {
+    toast("Browser notifications are not supported.");
+    return;
+  }
+
+  if (Notification.permission === "default") {
+    await Notification.requestPermission();
+  }
+
+  if (Notification.permission === "granted") {
+    new Notification("Enroute Parcel Update", {
+      body: `Your parcel status is now: ${status}`
+    });
+  }
+}
+
+
+/* ---------- Parcel status simulation ---------- */
+const parcelStatuses = [
+  "Ready for Pickup",
+  "In Transit",
+  "Near Destination",
+  "Delivered"
+];
+
+let parcelStatusIndex = 0;
+
+function updateParcelStatus() {
+  parcelStatusIndex = (parcelStatusIndex + 1) % parcelStatuses.length;
+
+  const status = parcelStatuses[parcelStatusIndex];
+  const statusEl = document.getElementById("parcelStatus");
+  const progressEl = document.getElementById("parcelProgress");
+
+  if (statusEl) statusEl.textContent = status;
+  if (progressEl) {
+    progressEl.textContent =
+      `${parcelStatusIndex + 1} / ${parcelStatuses.length} · ${status}`;
+  }
+
+  toast(`Parcel status updated: ${status}`);
+  notifyParcelStatus(status);
+}
+
+
+/* ---------- Web Share API ---------- */
+async function shareParcel() {
+  const trackingId =
+    document.getElementById("trackingId")?.value.trim() || "ENR-PARCEL-2026";
+
+  const shareData = {
+    title: "Enroute Parcel Tracking",
+    text: `Track my Enroute parcel: ${trackingId}`
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      toast("Parcel tracking shared.");
+    } catch (error) {
+      if (error.name !== "AbortError") toast("Sharing was cancelled or failed.");
+    }
+  } else {
+    await copyText(`Enroute Parcel Tracking: ${trackingId}`);
+    toast("Web Share is unavailable. Tracking details copied instead.");
+  }
+}
+
+
+/* ---------- Clipboard API ---------- */
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.style.position = "fixed";
+  area.style.opacity = "0";
+  document.body.appendChild(area);
+  area.select();
+
+  const copied = document.execCommand("copy");
+  area.remove();
+
+  return copied;
+}
+
+async function copyTrackingId() {
+  const trackingId =
+    document.getElementById("trackingId")?.value.trim() || "ENR-PARCEL-2026";
+
+  try {
+    await copyText(trackingId);
+    toast(`Copied tracking ID: ${trackingId}`);
+  } catch {
+    toast("Clipboard access was blocked by the browser.");
+  }
+}
+
+
+/* ---------- Geolocation for parcel pickup ---------- */
+async function useParcelLocation() {
+  if (!navigator.geolocation) {
+    toast("Geolocation is not supported by this browser.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = position.coords.latitude.toFixed(5);
+      const lng = position.coords.longitude.toFixed(5);
+
+      const fromInput = document.getElementById("from");
+      if (fromInput) {
+        fromInput.value = `My Location (${lat}, ${lng})`;
+      }
+
+      toast("Current pickup location detected.");
+    },
+    () => toast("Location permission was denied or unavailable."),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+
+/* ==========================================
+   ADDITIONAL JAVASCRIPT EVENT HANDLING
+   ========================================== */
+
+// EVENT 1: KEYDOWN
+// Press Enter in either location field to search.
+
+document.getElementById("from").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        searchJourney();
+    }
+});
+
+document.getElementById("to").addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        searchJourney();
+    }
+});
+
+
+// EVENT 2: INPUT
+// Give feedback while the user enters a location.
+
+document.getElementById("from").addEventListener("input", function() {
+    if (this.value.trim() !== "") {
+        this.style.borderColor = "#10b981";
+    } else {
+        this.style.borderColor = "#e2e8f0";
+    }
+});
+
+document.getElementById("to").addEventListener("input", function() {
+    if (this.value.trim() !== "") {
+        this.style.borderColor = "#10b981";
+    } else {
+        this.style.borderColor = "#e2e8f0";
+    }
+});
+
+
+// EVENT 3: CHANGE
+// Display feedback when the user changes the date.
+
+document.getElementById("date").addEventListener("change", function() {
+    if (this.value !== "") {
+        toast("Journey date selected: " + this.value);
+    }
+});
+
+
+// EVENT 4: MOUSEOVER
+// Highlight the service cards when the mouse moves over them.
+
+document.querySelectorAll("#services .reveal").forEach(function(card) {
+
+    card.addEventListener("mouseover", function() {
+        this.style.transform = "translateY(-5px)";
+        this.style.transition = "transform 0.3s ease";
+    });
+
+    card.addEventListener("mouseout", function() {
+        this.style.transform = "translateY(0)";
+    });
+
+});
+
+
+</script>
+
+</body>
+</html>

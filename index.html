@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Enroute: AI-powered ride sharing and parcel delivery with live maps." />
+<title>Enroute | Share Rides. Send Parcels.</title>
+
+<!-- Tailwind CSS via CDN (same config as the Part 1 page) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = { theme: {
+  extend: {
+    colors: { enroute: {
+      50:"#effcf6", 100:"#d9f8e9", 200:"#b8efd3",
+      300:"#7de0b0", 400:"#34c98a", 500:"#10b981",
+      600:"#059669", 700:"#047857", 800:"#065f46", 900:"#064e3b"
+    }},
+    boxShadow: { soft: "0 20px 60px rgba(15,23,42,.12)" }
+  }
+}};
+</script>
+</head>
+<body class="text-slate-900">
+<div id="root"></div>
+<script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

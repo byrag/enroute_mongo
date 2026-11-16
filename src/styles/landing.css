@@ -1,0 +1,52 @@
+/* Landing page: road, vehicles, scenery, floating cards */
+
+/* ================= ROAD ================= */
+.road {
+  position:relative; height:175px; overflow:hidden;
+  background: linear-gradient(#94a3b8 0 6px,#263449 6px 169px,#94a3b8 169px 175px);
+}
+.road-lane {
+  position:absolute; left:0; right:0; height:3px;
+  background:repeating-linear-gradient(90deg,#f8fafc 0 55px,transparent 55px 105px);
+}
+.lane-a { top:55px; }
+.lane-b { top:116px; }
+.road-center {
+  position:absolute; left:0; right:0; top:85px; height:4px;
+  background:repeating-linear-gradient(90deg,#facc15 0 45px,transparent 45px 90px);
+}
+
+/* ================= VEHICLES ================= */
+.vehicle { position:absolute; z-index:10; filter:drop-shadow(0 7px 5px rgba(0,0,0,.3)); }
+.right-fast { animation: driveRight 13s linear infinite; }
+.right-slow { animation: driveRight 22s linear infinite -11s; }
+.left-fast { animation: driveLeft 16s linear infinite -5s; }
+@keyframes driveRight {
+  from { transform:translateX(-150px); }
+  to { transform:translateX(calc(100vw + 150px)); }
+}
+@keyframes driveLeft {
+  from { transform:translateX(calc(100vw + 150px)); }
+  to { transform:translateX(-150px); }
+}
+
+/* ================= SCENERY ================= */
+.tree { transform-origin:bottom center; animation: treeSway 3s ease-in-out infinite; }
+.tree:nth-child(2n) { animation-delay:.7s; }
+.tree:nth-child(3n) { animation-delay:1.3s; }
+@keyframes treeSway {
+  0%,100% { transform:rotate(-1deg); }
+  50% { transform:rotate(1.5deg); }
+}
+.cloud { animation: cloudMove 25s linear infinite; }
+@keyframes cloudMove {
+  from { transform:translateX(-15vw); }
+  to { transform:translateX(115vw); }
+}
+
+/* ================= UI ================= */
+.float { animation: floating 5s ease-in-out infinite; }
+@keyframes floating {
+  0%,100% { transform:translateY(0); }
+  50% { transform:translateY(-9px); }
+}
